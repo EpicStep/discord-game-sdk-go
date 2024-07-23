@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 )
 
-const (
-	ipcFileName = "/discord-ipc-0"
-)
-
-func openConn(ctx context.Context) (net.Conn, error) {
-	return (&net.Dialer{}).DialContext(ctx, "unix", filepath.Join(getIPCPath(), ipcFileName))
+func openConn(ctx context.Context, dialer net.Dialer, filename string) (net.Conn, error) {
+	return dialer.DialContext(
+		ctx,
+		"unix",
+		filepath.Join(getIPCPath(), filename),
+	)
 }
 
 const (

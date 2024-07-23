@@ -1,35 +1,66 @@
+// Package transport defines and implementing Conn to Disocrd.
 package transport
 
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 )
 
-type Conn struct {
+// Conn to discord.
+type Conn interface {
+	Write(ctx context.Context, opcode uint32, data []byte) error
+	Read(ctx context.Context) (opcode uint32, data []byte, err error)
+	Close() error
+}
+
+type conn struct {
 	conn net.Conn
 
 	writeMux sync.Mutex
 	readMux  sync.Mutex
 }
 
-func New(ctx context.Context) (*Conn, error) {
-	conn, err := openConn(ctx)
+// Options ...
+type Options struct {
+	// Dialer used to connect to IPC. Used only on unix.
+	Dialer net.Dialer
+	// InstanceID is variable that you can use to handle multiple Discord clients.
+	// Alternative to DISCORD_INSTANCE_ID.
+	// https://discord.com/developers/docs/game-sdk/getting-started#testing-locally-with-two-clients-environment-variable-example
+	InstanceID uint
+}
+
+func New(ctx context.Context, opts Options) (Conn, error) {
+	netConn, err := openConn(ctx, opts.Dialer, getDiscordFilename(opts.InstanceID))
 	if err != nil {
 		return nil, err
 	}
 
-	return &Conn{
-		conn: conn,
+	return &conn{
+		conn: netConn,
 	}, nil
 }
 
-func (c *Conn) Write(ctx context.Context, opcode uint32, data []byte) error {
-	// TODO: check data size.
+const (
+	// maxMessageSize is a libuv max message size that used as limitation.
+	// https://github.com/discord/discord-rpc/blob/master/src/rpc_connection.h#L8
+	maxMessageSize = 64 * 1024
+)
+
+var errMessageTooBig = errors.New("message too big, max size is " + strconv.Itoa(maxMessageSize))
+
+func (c *conn) Write(ctx context.Context, opcode uint32, data []byte) error {
+	// if len of data + opcode + data size > maxMessageSize we need to skip this.
+	if len(data)+8 > maxMessageSize {
+		return fmt.Errorf("failed to write message: %w", errMessageTooBig)
+	}
 
 	c.writeMux.Lock()
 	defer c.writeMux.Unlock()
@@ -57,7 +88,7 @@ func (c *Conn) Write(ctx context.Context, opcode uint32, data []byte) error {
 	return nil
 }
 
-func (c *Conn) Read(ctx context.Context) (opcode uint32, data []byte, err error) {
+func (c *conn) Read(ctx context.Context) (opcode uint32, data []byte, err error) {
 	c.readMux.Lock()
 	defer c.readMux.Unlock()
 
@@ -76,8 +107,6 @@ func (c *Conn) Read(ctx context.Context) (opcode uint32, data []byte, err error)
 		return 0, nil, fmt.Errorf("failed to read header: %w", err)
 	}
 
-	// TODO: check data size.
-
 	opcode = binary.LittleEndian.Uint32(header[:4])
 	payloadLength := binary.LittleEndian.Uint32(header[4:8])
 
@@ -89,6 +118,10 @@ func (c *Conn) Read(ctx context.Context) (opcode uint32, data []byte, err error)
 	return opcode, data, nil
 }
 
-func (c *Conn) Close() error {
+func (c *conn) Close() error {
 	return c.conn.Close()
+}
+
+func getDiscordFilename(instanceID uint) string {
+	return "discord-ipc-" + strconv.FormatUint(uint64(instanceID), 10)
 }
