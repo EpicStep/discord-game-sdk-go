@@ -1,0 +1,53 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  lll:
+    line-length: 140
+
+  funlen:
+    lines: 70
+    statements: -1 # disabled
+
+linters:
+  enable:
+    - errcheck              # errcheck is a program for checking for unchecked errors in Go code. These unchecked errors can be critical bugs in some cases
+    - errorlint             # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
+    - gosimple              # linter for Go source code that specializes in simplifying code
+    - govet                 # vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
+    - staticcheck           # just a set of rules
+    - ineffassign           # detects when assignments to existing variables are not used
+    - goimports             # check import statements are formatted according to the 'goimport' command, --fix flag autofix is supported.
+    - bodyclose             # checks whether HTTP response body is closed successfully
+    - lll                   # reports long lines
+    - stylecheck            # stylecheck is a replacement for golint
+    - unused                # checks Go code for unused constants, variables, functions and types
+    - contextcheck          # check whether the function uses a non-inherited context
+    - noctx                 # noctx finds sending http request without context.Context
+    - errname               # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
+    - goconst               # finds repeated strings that could be replaced by a constant
+    - gocritic              # check for bugs, performance and style issues.
+    - prealloc              # finds slice declarations that could potentially be pre-allocated
+    - nilerr                # finds the code that returns nil even if it checks that the error is not nil.
+    - interfacebloat        # checks the number of methods inside an interface.
+    - unparam               # reports unused function parameters
+    - usestdlibvars         # linter that detects the possibility to use variables/constants from the Go standard library.
+    - wastedassign          # wastedassign finds wasted assignment statements
+    - revive                # revive contains multiple linters
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  formats:
+    - format: tab
+  path-prefix: "./"
+  sort-results: true

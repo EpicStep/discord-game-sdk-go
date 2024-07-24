@@ -1,4 +1,4 @@
-// Package transport defines and implementing Conn to Disocrd.
+// Package transport defines and implementing Conn to Discord.
 package transport
 
 import (
@@ -29,7 +29,7 @@ type conn struct {
 
 // Options ...
 type Options struct {
-	// Dialer used to connect to IPC. Used only on unix.
+	// Dialer used to connect to IPC (only on unix),
 	Dialer net.Dialer
 	// InstanceID is variable that you can use to handle multiple Discord clients.
 	// Alternative to DISCORD_INSTANCE_ID.
@@ -37,6 +37,7 @@ type Options struct {
 	InstanceID uint
 }
 
+// New opens new IPC Conn and returns it.
 func New(ctx context.Context, opts Options) (Conn, error) {
 	netConn, err := openConn(ctx, opts.Dialer, getDiscordFilename(opts.InstanceID))
 	if err != nil {
